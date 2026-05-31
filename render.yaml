@@ -1,0 +1,72 @@
+services:
+  # PostgreSQL Data Warehouse
+  - type: pserv
+    name: postgres-warehouse
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.postgres
+    envVars:
+      - key: POSTGRES_USER
+        value: warehouse
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_DB
+        value: data_warehouse
+    disk:
+      name: warehouse-data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 1
+
+  # MinIO Object Storage
+  - type: web
+    name: minio
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.minio
+    envVars:
+      - key: MINIO_ROOT_USER
+        value: minioadmin
+      - key: MINIO_ROOT_PASSWORD
+        generateValue: true
+    disk:
+      name: minio-data
+      mountPath: /data
+      sizeGB: 1
+
+  # Redis
+  - type: redis
+    name: redis
+    plan: free
+    maxmemoryPolicy: noeviction
+
+  # Airflow Webserver
+  - type: web
+    name: airflow-webserver
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.airflow
+    envVars:
+      - key: AIRFLOW__CORE__EXECUTOR
+        value: LocalExecutor
+      - key: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+        fromDatabase:
+          name: postgres-warehouse
+          property: connectionString
+      - key: AIRFLOW__CORE__FERNET_KEY
+        generateValue: true
+      - key: AIRFLOW__WEBSERVER__SECRET_KEY
+        generateValue: true
+      - key: AIRFLOW__CORE__LOAD_EXAMPLES
+        value: "false"
+    healthCheckPath: /health
+
+  # Static UI
+  - type: web
+    name: ui-dashboard
+    env: static
+    buildCommand: echo "No build needed"
+    staticPublishPath: ./ui
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

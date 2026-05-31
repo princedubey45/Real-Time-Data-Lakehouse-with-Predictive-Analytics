@@ -1,0 +1,15 @@
+FROM postgres:15
+
+# Copy initialization scripts
+COPY ./warehouse/schema.sql /docker-entrypoint-initdb.d/01_schema.sql
+COPY ./warehouse/dim_customer.sql /docker-entrypoint-initdb.d/02_dim_customer.sql
+COPY ./warehouse/dim_product.sql /docker-entrypoint-initdb.d/03_dim_product.sql
+COPY ./warehouse/dim_date.sql /docker-entrypoint-initdb.d/04_dim_date.sql
+COPY ./warehouse/fact_sales.sql /docker-entrypoint-initdb.d/05_fact_sales.sql
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+  CMD pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
