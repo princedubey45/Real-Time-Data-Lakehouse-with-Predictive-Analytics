@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enterprise Data Platform</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">DataPlatform</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">&#9776;</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="pipeline">
+        <span class="nav-icon">🔄</span><span class="nav-label">ETL Pipeline</span>
+      </a>
+      <a href="#" class="nav-item" data-page="datalake">
+        <span class="nav-icon">🗄️</span><span class="nav-label">Data Lake</span>
+      </a>
+      <a href="#" class="nav-item" data-page="warehouse">
+        <span class="nav-icon">🏛️</span><span class="nav-label">Warehouse</span>
+      </a>
+      <a href="#" class="nav-item" data-page="anomalies">
+        <span class="nav-icon">⚠️</span><span class="nav-label">Anomalies</span>
+      </a>
+      <a href="#" class="nav-item" data-page="forecast">
+        <span class="nav-icon">📈</span><span class="nav-label">Forecast</span>
+      </a>
+      <a href="#" class="nav-item" data-page="services">
+        <span class="nav-icon">🔗</span><span class="nav-label">Services</span>
+      </a>
+      <a href="#" class="nav-item" data-page="run">
+        <span class="nav-icon">▶️</span><span class="nav-label">Run Pipeline</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="status-dot online"></div>
+      <span>All services online</span>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main" id="main">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+        <span class="breadcrumb" id="breadcrumb">Overview</span>
+      </div>
+      <div class="topbar-right">
+        <span class="last-run">Last run: <strong id="lastRunTime">—</strong></span>
+        <button class="btn btn-primary" id="triggerRunBtn">▶ Trigger Run</button>
+      </div>
+    </header>
+
+    <!-- Pages -->
+    <div class="page active" id="page-dashboard">
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#6366f120">📦</div>
+          <div class="kpi-body">
+            <div class="kpi-value" id="kpi-orders">—</div>
+            <div class="kpi-label">Total Orders</div>
+          </div>
+          <div class="kpi-trend up" id="kpi-orders-trend"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#10b98120">👥</div>
+          <div class="kpi-body">
+            <div class="kpi-value" id="kpi-customers">—</div>
+            <div class="kpi-label">Customers</div>
+          </div>
+          <div class="kpi-trend up" id="kpi-customers-trend"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#f59e0b20">🛍️</div>
+          <div class="kpi-body">
+            <div class="kpi-value" id="kpi-products">—</div>
+            <div class="kpi-label">Products</div>
+          </div>
+          <div class="kpi-trend" id="kpi-products-trend"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#ef444420">⚠️</div>
+          <div class="kpi-body">
+            <div class="kpi-value" id="kpi-anomalies">—</div>
+            <div class="kpi-label">Open Anomalies</div>
+          </div>
+          <div class="kpi-trend down" id="kpi-anomalies-trend"></div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="charts-row">
+        <div class="card chart-card wide">
+          <div class="card-header">
+            <h3>Revenue Trend (Simulated)</h3>
+            <span class="badge badge-green">Live</span>
+          </div>
+          <canvas id="revenueChart" height="220"></canvas>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Revenue by Category</h3>
+          </div>
+          <canvas id="categoryChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Bottom row -->
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-header"><h3>Pipeline Status</h3></div>
+          <div class="pipeline-status-list" id="pipelineStatusList"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Top Products</h3></div>
+          <div class="table-wrap">
+            <table class="data-table" id="topProductsTable">
+              <thead><tr><th>#</th><th>Product</th><th>Category</th><th>Revenue</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ETL Pipeline page -->
+    <div class="page" id="page-pipeline">
+      <div class="card">
+        <div class="card-header">
+          <h3>ETL Pipeline — etl_pipeline DAG</h3>
+          <span class="badge badge-blue">Daily 06:00 UTC</span>
+        </div>
+        <div class="dag-flow" id="dagFlow"></div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header">
+          <h3>Quality Check DAG</h3>
+          <span class="badge badge-blue">Daily 06:30 UTC</span>
+        </div>
+        <div class="dag-flow" id="dagFlow2"></div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Run Log</h3></div>
+        <div class="log-box" id="pipelineLog">Waiting for pipeline run…</div>
+      </div>
+    </div>
+
+    <!-- Data Lake page -->
+    <div class="page" id="page-datalake">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#f59e0b20">🟤</div>
+          <div class="kpi-body"><div class="kpi-value">Bronze</div><div class="kpi-label">Raw JSON</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#6366f120">⚪</div>
+          <div class="kpi-body"><div class="kpi-value">Silver</div><div class="kpi-label">Cleaned Parquet</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#f59e0b20">🟡</div>
+          <div class="kpi-body"><div class="kpi-value">Gold</div><div class="kpi-label">Aggregated Parquet</div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#10b98120">📋</div>
+          <div class="kpi-body"><div class="kpi-value">Reports</div><div class="kpi-label">Quality JSON</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Data Lake Layers</h3></div>
+        <div class="lake-layers" id="lakeLayers"></div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>MinIO Bucket Structure</h3></div>
+        <div class="file-tree" id="fileTree"></div>
+      </div>
+    </div>
+
+    <!-- Warehouse page -->
+    <div class="page" id="page-warehouse">
+      <div class="card">
+        <div class="card-header"><h3>Warehouse Tables</h3></div>
+        <div class="table-wrap">
+          <table class="data-table" id="warehouseTable">
+            <thead><tr><th>Table</th><th>Type</th><th>Description</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="charts-row" style="margin-top:1.5rem">
+        <div class="card chart-card">
+          <div class="card-header"><h3>Customer LTV Distribution</h3></div>
+          <canvas id="ltvChart" height="220"></canvas>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header"><h3>Daily Sales Aggregation</h3></div>
+          <canvas id="dailySalesChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Anomalies page -->
+    <div class="page" id="page-anomalies">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon" style="background:#ef444420">🔴</div><div class="kpi-body"><div class="kpi-value" id="anom-critical">—</div><div class="kpi-label">Critical</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#f97316 20">🟠</div><div class="kpi-body"><div class="kpi-value" id="anom-high">—</div><div class="kpi-label">High</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#f59e0b20">🟡</div><div class="kpi-body"><div class="kpi-value" id="anom-medium">—</div><div class="kpi-label">Medium</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#10b98120">🟢</div><div class="kpi-body"><div class="kpi-value" id="anom-low">—</div><div class="kpi-label">Low</div></div></div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header">
+          <h3>Anomaly Log</h3>
+          <div class="filter-row">
+            <select id="anomSeverityFilter" class="select-sm">
+              <option value="">All Severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <select id="anomTypeFilter" class="select-sm">
+              <option value="">All Types</option>
+              <option value="revenue_outlier">Revenue Outlier</option>
+              <option value="quantity_outlier">Quantity Outlier</option>
+              <option value="price_discrepancy">Price Discrepancy</option>
+              <option value="revenue_drop">Revenue Drop</option>
+              <option value="customer_spend_spike">Spend Spike</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="anomalyTable">
+            <thead><tr><th>Time</th><th>Entity</th><th>Type</th><th>Metric</th><th>Value</th><th>Severity</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Detection Methods</h3></div>
+        <div class="methods-grid" id="methodsGrid"></div>
+      </div>
+    </div>
+
+    <!-- Forecast page -->
+    <div class="page" id="page-forecast">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon" style="background:#6366f120">📅</div><div class="kpi-body"><div class="kpi-value">30 days</div><div class="kpi-label">Horizon</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#10b98120">🎯</div><div class="kpi-body"><div class="kpi-value">95%</div><div class="kpi-label">Confidence</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#f59e0b20">📐</div><div class="kpi-body"><div class="kpi-value">Holt-Winters</div><div class="kpi-label">Model</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#6366f120">📆</div><div class="kpi-body"><div class="kpi-value">Weekly</div><div class="kpi-label">Seasonality</div></div></div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header">
+          <h3>30-Day Revenue Forecast</h3>
+          <span class="badge badge-green">Holt-Winters</span>
+        </div>
+        <canvas id="forecastChart" height="260"></canvas>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Forecast Results Table</h3></div>
+        <div class="table-wrap">
+          <table class="data-table" id="forecastTable">
+            <thead><tr><th>Day</th><th>Date</th><th>Predicted</th><th>Lower (95%)</th><th>Upper (95%)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Services page -->
+    <div class="page" id="page-services">
+      <div class="services-grid" id="servicesGrid"></div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Architecture Overview</h3></div>
+        <div class="arch-diagram" id="archDiagram"></div>
+      </div>
+    </div>
+
+    <!-- Run Pipeline page -->
+    <div class="page" id="page-run">
+      <div class="card">
+        <div class="card-header"><h3>Manual Pipeline Execution</h3></div>
+        <p class="run-desc">Run each step of the pipeline individually or trigger the full pipeline. Copy the commands and run them in your terminal.</p>
+        <div class="run-steps" id="runSteps"></div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Docker Services</h3></div>
+        <div class="docker-cmds" id="dockerCmds"></div>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Airflow DAG Trigger</h3></div>
+        <div class="airflow-info">
+          <p>Open Airflow UI at <a href="http://localhost:8080" target="_blank" class="link">http://localhost:8080</a> and enable the DAGs:</p>
+          <ul class="dag-list">
+            <li><code>etl_pipeline</code> — Daily 06:00 UTC — Full ingest → clean → transform → validate → load</li>
+            <li><code>quality_check</code> — Daily 06:30 UTC — Quality checks, anomaly detection, forecasting</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

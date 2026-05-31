@@ -1,0 +1,168 @@
+version: "3.9"
+
+# ══════════════════════════════════════════════════════════════════
+#  Enterprise Data Platform — Docker Compose
+#  Services: PostgreSQL · MinIO · Redis · Airflow · Grafana
+# ══════════════════════════════════════════════════════════════════
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.1-python3.11
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-meta/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres-meta/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    AIRFLOW__CORE__FERNET_KEY: "46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho="
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__WEBSERVER__SECRET_KEY: "enterprise_secret_2024"
+    AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+    # App env vars passed to all tasks
+    POSTGRES_HOST: postgres-warehouse
+    POSTGRES_PORT: 5432
+    POSTGRES_DB: data_warehouse
+    POSTGRES_USER: warehouse
+    POSTGRES_PASSWORD: warehouse
+    MINIO_ENDPOINT: http://minio:9000
+    MINIO_ACCESS_KEY: minioadmin
+    MINIO_SECRET_KEY: minioadmin
+    MINIO_BUCKET: enterprise-lake
+    API_BASE_URL: https://fakestoreapi.com
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./api_ingestion:/opt/airflow/api_ingestion
+    - ./etl:/opt/airflow/etl
+    - ./anomaly_detection:/opt/airflow/anomaly_detection
+    - ./forecasting:/opt/airflow/forecasting
+    - airflow_logs:/opt/airflow/logs
+  depends_on:
+    postgres-meta:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+
+  # ── Data Warehouse ──────────────────────────────────────────────
+  postgres-warehouse:
+    image: postgres:15
+    container_name: postgres_warehouse
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: warehouse
+      POSTGRES_DB: data_warehouse
+    volumes:
+      - warehouse_data:/var/lib/postgresql/data
+      - ./warehouse/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./warehouse/dim_customer.sql:/docker-entrypoint-initdb.d/02_dim_customer.sql
+      - ./warehouse/dim_product.sql:/docker-entrypoint-initdb.d/03_dim_product.sql
+      - ./warehouse/dim_date.sql:/docker-entrypoint-initdb.d/04_dim_date.sql
+      - ./warehouse/fact_sales.sql:/docker-entrypoint-initdb.d/05_fact_sales.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse -d data_warehouse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Airflow Metadata DB ────────────────────────────────────────
+  postgres-meta:
+    image: postgres:15
+    container_name: postgres_airflow_meta
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_meta_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      retries: 5
+
+  # ── Object Storage (Data Lake) ──────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"   # Console → http://localhost:9001
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      retries: 3
+
+  # ── Message Broker (Celery) ─────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 3
+
+  # ── Airflow Web UI ──────────────────────────────────────────────
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow_webserver
+    ports:
+      - "8080:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      retries: 5
+
+  # ── Airflow Scheduler ───────────────────────────────────────────
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow_scheduler
+    command: scheduler
+
+  # ── Airflow Worker ──────────────────────────────────────────────
+  airflow-worker:
+    <<: *airflow-common
+    container_name: airflow_worker
+    command: celery worker
+
+  # ── Airflow Init (one-shot setup) ──────────────────────────────
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    command: >
+      bash -c "
+        airflow db upgrade &&
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@enterprise.com
+      "
+    restart: "no"
+
+  # ── Grafana (operational dashboards) ───────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - postgres-warehouse
+
+volumes:
+  warehouse_data:
+  airflow_meta_data:
+  airflow_logs:
+  minio_data:
+  grafana_data:
