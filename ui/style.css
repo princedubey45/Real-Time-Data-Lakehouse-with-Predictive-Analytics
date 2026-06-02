@@ -278,6 +278,21 @@ html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; backgrou
 .sev-medium   { background:#f59e0b20; color:var(--yellow); padding:.15rem .5rem; border-radius:20px; font-size:.7rem; font-weight:600; }
 .sev-low      { background:#10b98120; color:var(--green);  padding:.15rem .5rem; border-radius:20px; font-size:.7rem; font-weight:600; }
 
+/* ── Config box ───────────────────────────────────────────────── */
+.config-box { display: flex; flex-direction: column; gap: .75rem; }
+.config-item { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; background: var(--bg3); border-radius: 6px; border: 1px solid var(--border); }
+.config-label { font-weight: 600; color: var(--text-muted); font-size: .85rem; }
+.config-value { font-family: monospace; font-size: .82rem; color: var(--primary-h); }
+.config-value a { color: var(--primary-h); text-decoration: none; }
+.config-value a:hover { text-decoration: underline; }
+
+/* ── Spark cluster ────────────────────────────────────────────── */
+.spark-cluster { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.spark-node { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; text-align: center; }
+.spark-node-name { font-weight: 700; margin-bottom: .5rem; }
+.spark-node-stats { display: flex; flex-direction: column; gap: .4rem; font-size: .75rem; color: var(--text-muted); }
+.spark-node-stat { display: flex; justify-content: space-between; }
+
 /* ── Toast ────────────────────────────────────────────────────── */
 .toast {
   position: fixed; bottom: 1.5rem; right: 1.5rem;

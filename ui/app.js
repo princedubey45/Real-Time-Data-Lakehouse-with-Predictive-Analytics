@@ -133,6 +133,7 @@ function navigate(page) {
     datalake:  'Data Lake',   warehouse: 'Warehouse',
     anomalies: 'Anomalies',   forecast: 'Forecast',
     services:  'Services',    run: 'Run Pipeline',
+    kafka:     'Kafka Streaming', spark: 'Spark Processing',
   };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   document.getElementById('breadcrumb').textContent = titles[page] || page;
@@ -151,6 +152,8 @@ function renderPage(page) {
     forecast:  renderForecast,
     services:  renderServices,
     run:       renderRun,
+    kafka:     renderKafka,
+    spark:     renderSpark,
   }[page];
   if (fn) fn();
 }
@@ -636,3 +639,205 @@ document.addEventListener('DOMContentLoaded', () => {
   navigate('dashboard');
   document.getElementById('lastRunTime').textContent = '06:00:10 UTC';
 });
+
+
+// ── KAFKA STREAMING ───────────────────────────────────────────────
+function renderKafka() {
+  const kafkaTopics = [
+    { name: 'orders-raw',    partitions: 3, replication: 1, messages: 12450, status: 'active' },
+    { name: 'customers-raw', partitions: 3, replication: 1, messages: 8920,  status: 'active' },
+    { name: 'products-raw',  partitions: 3, replication: 1, messages: 5430,  status: 'active' },
+  ];
+
+  const kafkaConsumers = [
+    { group: 'enterprise-etl',  topic: 'orders-raw',    members: 2, lag: '0ms',   status: 'consuming' },
+    { group: 'enterprise-etl',  topic: 'customers-raw', members: 2, lag: '15ms',  status: 'consuming' },
+    { group: 'enterprise-etl',  topic: 'products-raw',  members: 2, lag: '8ms',   status: 'consuming' },
+  ];
+
+  // KPIs
+  document.getElementById('kafka-messages').textContent = '3.2K';
+
+  // Topics table
+  const topicsTbody = document.querySelector('#kafkaTopicsTable tbody');
+  topicsTbody.innerHTML = kafkaTopics.map(t => `
+    <tr>
+      <td><code>${t.name}</code></td>
+      <td>${t.partitions}</td>
+      <td>${t.replication}</td>
+      <td>${t.messages.toLocaleString()}</td>
+      <td><span class="badge badge-green">✓ ${t.status}</span></td>
+    </tr>`).join('');
+
+  // Consumer groups table
+  const consumerTbody = document.querySelector('#kafkaConsumerTable tbody');
+  consumerTbody.innerHTML = kafkaConsumers.map(c => `
+    <tr>
+      <td><code>${c.group}</code></td>
+      <td>${c.topic}</td>
+      <td>${c.members}</td>
+      <td>${c.lag}</td>
+      <td><span class="badge badge-green">✓ ${c.status}</span></td>
+    </tr>`).join('');
+
+  // Throughput chart
+  destroyChart('kafka');
+  charts.kafka = new Chart(document.getElementById('kafkaChart'), {
+    type: 'line',
+    data: {
+      labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'],
+      datasets: [{
+        label: 'Messages/sec',
+        data: [1200, 1900, 1500, 2200, 2800, 2100, 1800],
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245,158,11,0.12)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#f59e0b',
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#2a334740' } },
+        y: { grid: { color: '#2a334740' } },
+      },
+    },
+  });
+
+  // Partition distribution
+  destroyChart('kafkaPartition');
+  charts.kafkaPartition = new Chart(document.getElementById('kafkaPartitionChart'), {
+    type: 'bar',
+    data: {
+      labels: ['orders-raw', 'customers-raw', 'products-raw'],
+      datasets: [{
+        label: 'Messages',
+        data: [12450, 8920, 5430],
+        backgroundColor: ['#6366f1', '#10b981', '#f59e0b'],
+        borderRadius: 5,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#2a334740' } },
+      },
+    },
+  });
+}
+
+// ── SPARK PROCESSING ──────────────────────────────────────────────
+function renderSpark() {
+  const sparkJobs = [
+    { id: 'job-2026-001', name: 'Clean Orders', status: 'success', duration: '45s', tasks: 12 },
+    { id: 'job-2026-002', name: 'Transform Customers', status: 'success', duration: '52s', tasks: 8 },
+    { id: 'job-2026-003', name: 'Aggregate Products', status: 'success', duration: '38s', tasks: 10 },
+    { id: 'job-2026-004', name: 'Join Dimensions', status: 'running', duration: '25s', tasks: 15 },
+  ];
+
+  // Spark cluster
+  document.getElementById('sparkCluster').innerHTML = `
+    <div class="spark-node">
+      <div class="spark-node-name">Master</div>
+      <div class="spark-node-stats">
+        <div class="spark-node-stat">
+          <span>Status:</span> <span style="color:var(--green)">✓ Running</span>
+        </div>
+        <div class="spark-node-stat">
+          <span>Port:</span> <span>7077</span>
+        </div>
+        <div class="spark-node-stat">
+          <span>UI:</span> <span><a href="http://localhost:8181" target="_blank">8181</a></span>
+        </div>
+      </div>
+    </div>
+    <div class="spark-node">
+      <div class="spark-node-name">Worker 1</div>
+      <div class="spark-node-stats">
+        <div class="spark-node-stat">
+          <span>Memory:</span> <span>2GB</span>
+        </div>
+        <div class="spark-node-stat">
+          <span>Cores:</span> <span>2</span>
+        </div>
+        <div class="spark-node-stat">
+          <span>Executors:</span> <span>4</span>
+        </div>
+      </div>
+    </div>
+    <div class="spark-node">
+      <div class="spark-node-name">Worker 2</div>
+      <div class="spark-node-stats">
+        <div class="spark-node-stat">
+          <span>Memory:</span> <span>2GB</span>
+        </div>
+        <div class="spark-node-stat">
+          <span>Cores:</span> <span>2</span>
+        </div>
+        <div class="spark-node-stat">
+          <span>Executors:</span> <span>4</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Jobs table
+  const jobsTbody = document.querySelector('#sparkJobsTable tbody');
+  jobsTbody.innerHTML = sparkJobs.map(j => `
+    <tr>
+      <td><code>${j.id}</code></td>
+      <td>${j.name}</td>
+      <td><span class="badge ${j.status === 'success' ? 'badge-green' : 'badge-blue'}">
+        ${j.status === 'success' ? '✓' : '⏳'} ${j.status}
+      </span></td>
+      <td>${j.duration}</td>
+      <td>${j.tasks}</td>
+    </tr>`).join('');
+
+  // Job execution chart
+  destroyChart('sparkJob');
+  charts.sparkJob = new Chart(document.getElementById('sparkJobChart'), {
+    type: 'bar',
+    data: {
+      labels: sparkJobs.map(j => j.name),
+      datasets: [{
+        label: 'Duration (seconds)',
+        data: [45, 52, 38, 25],
+        backgroundColor: ['#10b981', '#10b981', '#10b981', '#6366f1'],
+        borderRadius: 5,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#2a334740' }, ticks: { callback: v => v + 's' } },
+      },
+    },
+  });
+
+  // Resource utilization chart
+  destroyChart('sparkResource');
+  charts.sparkResource = new Chart(document.getElementById('sparkResourceChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['CPU Used', 'Memory Used', 'Available'],
+      datasets: [{
+        data: [65, 78, 40],
+        backgroundColor: ['#6366f1', '#f59e0b', '#10b981'],
+        borderWidth: 2,
+        borderColor: '#161b27',
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { padding: 12, boxWidth: 12 } } },
+      cutout: '60%',
+    },
+  });
+}

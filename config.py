@@ -74,6 +74,99 @@ class WarehouseConfig:
         )
 
 
+# ── Kafka (Streaming Layer) ────────────────────────────────────────────────────
+
+@dataclass
+class KafkaConfig:
+    # Bootstrap servers — comma-separated for multi-broker setups
+    bootstrap_servers: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
+
+    # Topics
+    orders_topic:    str = os.getenv("KAFKA_ORDERS_TOPIC",    "orders-raw")
+    customers_topic: str = os.getenv("KAFKA_CUSTOMERS_TOPIC", "customers-raw")
+    products_topic:  str = os.getenv("KAFKA_PRODUCTS_TOPIC",  "products-raw")
+    events_topic:    str = os.getenv("KAFKA_EVENTS_TOPIC",    "pipeline-events")
+
+    # Consumer
+    consumer_group:      str = os.getenv("KAFKA_CONSUMER_GROUP",      "enterprise-etl")
+    consumer_timeout_ms: int = int(os.getenv("KAFKA_CONSUMER_TIMEOUT_MS", "10000"))
+    auto_offset_reset:   str = os.getenv("KAFKA_AUTO_OFFSET_RESET",   "earliest")
+
+    # Producer
+    acks:               str = os.getenv("KAFKA_ACKS",               "all")  # strongest guarantee
+    retries:            int = int(os.getenv("KAFKA_RETRIES",        "3"))
+    compression_type:   str = os.getenv("KAFKA_COMPRESSION",        "snappy")
+
+    @property
+    def producer_config(self) -> dict:
+        return {
+            "bootstrap.servers": self.bootstrap_servers,
+            "acks":              self.acks,
+            "retries":           self.retries,
+            "compression.type":  self.compression_type,
+            "linger.ms":         10,       # batch up to 10ms for throughput
+            "batch.size":        16384,
+        }
+
+    @property
+    def consumer_config(self) -> dict:
+        return {
+            "bootstrap.servers":  self.bootstrap_servers,
+            "group.id":           self.consumer_group,
+            "auto.offset.reset":  self.auto_offset_reset,
+            "enable.auto.commit": True,
+        }
+
+    @property
+    def all_topics(self) -> list[str]:
+        return [self.orders_topic, self.customers_topic, self.products_topic]
+
+
+# ── Apache Spark (Distributed Transform) ──────────────────────────────────────
+
+@dataclass
+class SparkConfig:
+    # Use "local[*]" for single-node (laptop/CI), "spark://spark-master:7077" for cluster
+    master_url:  str = os.getenv("SPARK_MASTER_URL",  "local[*]")
+    app_name:    str = os.getenv("SPARK_APP_NAME",    "enterprise-data-platform")
+    log_level:   str = os.getenv("SPARK_LOG_LEVEL",   "WARN")
+
+    # S3A (MinIO) config used by Spark to read/write Parquet
+    s3a_endpoint:   str = os.getenv("MINIO_ENDPOINT",   "http://localhost:9000")
+    s3a_access_key: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+    s3a_secret_key: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+    s3a_path_style: str = "true"   # required for MinIO (non-AWS S3)
+
+    # Memory / executor tuning (sane defaults for a dev laptop)
+    driver_memory:   str = os.getenv("SPARK_DRIVER_MEMORY",   "1g")
+    executor_memory: str = os.getenv("SPARK_EXECUTOR_MEMORY", "1g")
+    executor_cores:  int = int(os.getenv("SPARK_EXECUTOR_CORES", "2"))
+
+    @property
+    def spark_conf(self) -> dict:
+        """Return a flat dict suitable for SparkConf.setAll() / SparkSession builder."""
+        return {
+            "spark.master":                    self.master_url,
+            "spark.app.name":                  self.app_name,
+            # S3A connector for MinIO
+            "spark.hadoop.fs.s3a.endpoint":                self.s3a_endpoint,
+            "spark.hadoop.fs.s3a.access.key":              self.s3a_access_key,
+            "spark.hadoop.fs.s3a.secret.key":              self.s3a_secret_key,
+            "spark.hadoop.fs.s3a.path.style.access":       self.s3a_path_style,
+            "spark.hadoop.fs.s3a.impl":                    "org.apache.hadoop.fs.s3a.S3AFileSystem",
+            "spark.hadoop.fs.s3a.aws.credentials.provider":"org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+            # Performance
+            "spark.driver.memory":             self.driver_memory,
+            "spark.executor.memory":           self.executor_memory,
+            "spark.executor.cores":            str(self.executor_cores),
+            "spark.sql.adaptive.enabled":      "true",
+            "spark.sql.adaptive.coalescePartitions.enabled": "true",
+            # Parquet optimisations
+            "spark.sql.parquet.compression.codec": "snappy",
+            "spark.sql.parquet.mergeSchema":        "false",
+        }
+
+
 # ── Anomaly Detection ──────────────────────────────────────────────────────────
 
 @dataclass
@@ -107,5 +200,7 @@ LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s — %(message)s"
 API       = APIConfig()
 LAKE      = LakeConfig()
 WAREHOUSE = WarehouseConfig()
+KAFKA     = KafkaConfig()
+SPARK     = SparkConfig()
 ANOMALY   = AnomalyConfig()
 FORECAST  = ForecastConfig()

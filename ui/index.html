@@ -41,6 +41,12 @@
       <a href="#" class="nav-item" data-page="run">
         <span class="nav-icon">▶️</span><span class="nav-label">Run Pipeline</span>
       </a>
+      <a href="#" class="nav-item" data-page="kafka">
+        <span class="nav-icon">📡</span><span class="nav-label">Kafka Streaming</span>
+      </a>
+      <a href="#" class="nav-item" data-page="spark">
+        <span class="nav-icon">⚡</span><span class="nav-label">Spark Processing</span>
+      </a>
     </nav>
     <div class="sidebar-footer">
       <div class="status-dot online"></div>
@@ -306,6 +312,131 @@
             <li><code>etl_pipeline</code> — Daily 06:00 UTC — Full ingest → clean → transform → validate → load</li>
             <li><code>quality_check</code> — Daily 06:30 UTC — Quality checks, anomaly detection, forecasting</li>
           </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kafka Streaming page -->
+    <div class="page" id="page-kafka">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon" style="background:#f59e0b20">📡</div><div class="kpi-body"><div class="kpi-value" id="kafka-topics">3</div><div class="kpi-label">Active Topics</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#10b98120">📨</div><div class="kpi-body"><div class="kpi-value" id="kafka-messages">0</div><div class="kpi-label">Messages/sec</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#6366f120">🔄</div><div class="kpi-body"><div class="kpi-value" id="kafka-partitions">9</div><div class="kpi-label">Total Partitions</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#ef444420">🎯</div><div class="kpi-body"><div class="kpi-value" id="kafka-lag">Low</div><div class="kpi-label">Consumer Lag</div></div></div>
+      </div>
+
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Kafka Topics</h3></div>
+        <div class="table-wrap">
+          <table class="data-table" id="kafkaTopicsTable">
+            <thead><tr><th>Topic Name</th><th>Partitions</th><th>Replication</th><th>Messages</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Kafka Consumer Groups</h3></div>
+        <div class="table-wrap">
+          <table class="data-table" id="kafkaConsumerTable">
+            <thead><tr><th>Consumer Group</th><th>Topic</th><th>Members</th><th>Lag</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="charts-row" style="margin-top:1.5rem">
+        <div class="card chart-card">
+          <div class="card-header"><h3>Message Throughput</h3></div>
+          <canvas id="kafkaChart" height="220"></canvas>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header"><h3>Partition Distribution</h3></div>
+          <canvas id="kafkaPartitionChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Kafka Configuration</h3></div>
+        <div class="config-box">
+          <div class="config-item">
+            <span class="config-label">Bootstrap Servers:</span>
+            <span class="config-value">kafka:9092</span>
+          </div>
+          <div class="config-item">
+            <span class="config-label">Zookeeper:</span>
+            <span class="config-value">zookeeper:2181</span>
+          </div>
+          <div class="config-item">
+            <span class="config-label">UI:</span>
+            <span class="config-value"><a href="http://localhost:8090" target="_blank">http://localhost:8090</a></span>
+          </div>
+          <div class="config-item">
+            <span class="config-label">Retention:</span>
+            <span class="config-value">168 hours (7 days)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spark Processing page -->
+    <div class="page" id="page-spark">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon" style="background:#f59e0b20">⚡</div><div class="kpi-body"><div class="kpi-value" id="spark-jobs">12</div><div class="kpi-label">Completed Jobs</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#10b98120">💾</div><div class="kpi-body"><div class="kpi-value" id="spark-memory">2GB</div><div class="kpi-label">Memory/Worker</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#6366f120">🔧</div><div class="kpi-body"><div class="kpi-value" id="spark-cores">4</div><div class="kpi-label">Cores Total</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon" style="background:#ef444420">📊</div><div class="kpi-body"><div class="kpi-value" id="spark-status">Running</div><div class="kpi-label">Cluster Status</div></div></div>
+      </div>
+
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Spark Cluster</h3></div>
+        <div class="spark-cluster" id="sparkCluster"></div>
+      </div>
+
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Recent Jobs</h3></div>
+        <div class="table-wrap">
+          <table class="data-table" id="sparkJobsTable">
+            <thead><tr><th>Job ID</th><th>Name</th><th>Status</th><th>Duration</th><th>Tasks</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="charts-row" style="margin-top:1.5rem">
+        <div class="card chart-card">
+          <div class="card-header"><h3>Job Execution Time</h3></div>
+          <canvas id="sparkJobChart" height="220"></canvas>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header"><h3>Resource Utilization</h3></div>
+          <canvas id="sparkResourceChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-header"><h3>Spark Configuration</h3></div>
+        <div class="config-box">
+          <div class="config-item">
+            <span class="config-label">Master:</span>
+            <span class="config-value"><a href="http://localhost:8181" target="_blank">spark://localhost:7077</a></span>
+          </div>
+          <div class="config-item">
+            <span class="config-label">Master UI:</span>
+            <span class="config-value"><a href="http://localhost:8181" target="_blank">http://localhost:8181</a></span>
+          </div>
+          <div class="config-item">
+            <span class="config-label">Worker UI:</span>
+            <span class="config-value"><a href="http://localhost:8282" target="_blank">http://localhost:8282</a></span>
+          </div>
+          <div class="config-item">
+            <span class="config-label">Mode:</span>
+            <span class="config-value">Cluster Mode</span>
+          </div>
+          <div class="config-item">
+            <span class="config-label">Workers:</span>
+            <span class="config-value">2</span>
+          </div>
         </div>
       </div>
     </div>
